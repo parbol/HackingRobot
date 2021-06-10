@@ -19,11 +19,11 @@ BUFFER_SIZE = 1024
 serverHi = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0a, 0x00, 0xa4, 0x02, 0x8c, 0x02, 0xa5, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]
 clientHi = [0x00, 0x04, 0x04, 0x1a, 0x17, 0x02, 0xe6, 0xdf, 0x00, 0x00, 0x00, 0x00]
 serverMessage = [0x02, 0x00, 0xff, 0x44, 0x00, 0x14]
-sendSequenceOK = [0xff, 0xff, 0xff, 0xff]
+sendallSequenceOK = [0xff, 0xff, 0xff, 0xff]
 startCounting = [0x00, 0x04, 0x04, 0xde, 0x16, 0x02, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00]
 countingAnswer = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0f, 0x00, 0x02]
 
-sendorder = [0xff, 0x44, 0x44, 0x6a, 0x00, 0x02, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x00]
+sendallorder = [0xff, 0x44, 0x44, 0x6a, 0x00, 0x02, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x00]
 
 
 class bcolors:
@@ -77,8 +77,9 @@ def is_counter(data):
 ##############################################################################
 def check_answer(connection):
 
-    data = connection.recv(BUFFER_SIZE)
-    return is_equal(data, sendSequenceOK)
+    data = connection.recv(4)
+    print 'the answer was ', len(data)
+    return is_equal(data, sendallSequenceOK)
     
 ##############################################################################
 def handle_handshake(connection, data):
@@ -86,7 +87,7 @@ def handle_handshake(connection, data):
     firstmessage = make_string_fromHEX(serverHi) 
     message = bytearray('Hello stupid robot\x0d\x0a\x0d\x0a', 'ascii')
     firstmessage.extend(message)
-    connection.send(firstmessage)
+    connection.sendall(firstmessage)
     if not check_answer(connection):
         print bcolors.FAIL + "The OK message was not received" + bcolors.ENDC
         sys.exit()
@@ -99,7 +100,7 @@ def handle_handshake(connection, data):
     server.append(n)
     secondmessage = make_string_fromHEX(server)
     secondmessage.extend(message)
-    connection.send(secondmessage)
+    connection.sendall(secondmessage)
     if not check_answer(connection):
         print bcolors.FAIL + "The OK message was not received" + bcolors.ENDC
         connection.close()
@@ -112,7 +113,7 @@ def handle_handshake(connection, data):
     server.append(n)    
     thirdmessage = make_string_fromHEX(server)
     thirdmessage.extend(message)
-    connection.send(thirdmessage)
+    connection.sendall(thirdmessage)
     if not check_answer(connection):
         print bcolors.FAIL + "The OK message was not received" + bcolors.ENDC
         connection.close()
@@ -129,7 +130,7 @@ def handle_counter(connection, data):
     answer.append(ord(data[7]))
     message = make_string_fromHEX(answer)
     time.sleep(1)
-    connection.send(message)
+    connection.sendall(message)
     if not check_answer(connection):
         print bcolors.FAIL + "The OK message was not received" + bcolors.ENDC
         connection.close()
@@ -162,35 +163,37 @@ if __name__ == "__main__":
     s.bind(server_address)
     s.listen(1)
 
-    while True:
-
-        connection, client_address = s.accept()
-        try:
-            print bcolors.OKGREEN + "Connection request from: " + client_address[0] + bcolors.ENDC
-            print bcolors.HEADER + "##############################" + bcolors.ENDC
-            data = connection.recv(BUFFER_SIZE) 
-            if is_handshake(data):
-                if handle_handshake(connection, data):
-                    print bcolors.OKBLUE + "The handshake was successful" + bcolors.ENDC
-                else:
-                    print bcolors.FAIL + "The handshake was not successful" + bcolors.ENDC
-                    connection.close()
-                    sys.exit()
+    connection, client_address = s.accept()
+    try:
+        print bcolors.OKGREEN + "Connection request from: " + client_address[0] + bcolors.ENDC
+        print bcolors.HEADER + "##############################" + bcolors.ENDC
+        data = connection.recv(12) 
+        if is_handshake(data):
+            if handle_handshake(connection, data):
+                print bcolors.OKBLUE + "The handshake was successful" + bcolors.ENDC
             else:
-                print bcolors.FAIL + "The handshake process was not successful: exiting" + bcolors.ENDC
+                print bcolors.FAIL + "The handshake was not successful" + bcolors.ENDC
                 connection.close()
                 sys.exit()
-            while True:
-                data = connection.recv(BUFFER_SIZE) 
-                if is_counter(data):
-                    handle_counter(connection, data)
-                #elif is_command(data):
-                #    handle_command(connection, data)
-                else:
-                    print bcolors.FAIL + "Unexpected message from the client: exiting" + bcolors.ENDC
-                    sys.exit()     
-        finally:
-            connection.close()    
+        else:
+            print bcolors.FAIL + "The handshake process was not successful: exiting" + bcolors.ENDC
+            connection.close()
+            sys.exit()
+        while True:
+            print 'before data' 
+            data = connection.recv(12) 
+            print 'aftere data' 
+            if is_counter(data):
+                print 'before handle' 
+                handle_counter(connection, data)
+                print 'after handle' 
+            #elif is_command(data):
+            #    handle_command(connection, data)
+            else:
+                print bcolors.FAIL + "Unexpected message from the client: exiting" + bcolors.ENDC
+                sys.exit()     
+    finally:
+        connection.close()    
 
 
 
