@@ -9,6 +9,7 @@
 import socket
 import time
 import sys
+import os
 
 class RobotClient:
 
@@ -56,21 +57,14 @@ class RobotClient:
 
         while True:
 
-            if not self.sendallCounter():
-                printError('There was a problem with the counter')
-                self.exit()
+            command = self.getCommand()
+            if command == 'none':
+                if not self.sendallCounter():
+                    self.printError('There was a problem with the counter')
+                    self.exit()
+            else:
+                self.processCommand(command)
               
-        #command = getCommand(options.filename)
-        #if command == 'none': 
-        #    if not sendall_counter(s, counter):
-        #        print 'Problem with communications'
-        #        s.close()
-        #        sys.exit()
-        #    time.sleep(5)
-        #else:
-        #    processCommand(command)
-
-
         self.s.close()
 
 
@@ -116,6 +110,8 @@ class RobotClient:
         self.printLog('Message received from server:')
         self.printCom(block)
         self.sendConfirmation()
+        self.printLog('Successful handshake performed')
+
     ##############################################################################
 
     ##############################################################################
@@ -161,7 +157,7 @@ class RobotClient:
     ##############################################################################
 
     ##############################################################################
-    def exit(self, text):
+    def exit(self):
 
         self.s.shutdown(socket.SHUT_RDWR)
         self.s.close()
@@ -208,10 +204,10 @@ class RobotClient:
     def getCommand(self):
     
         if os.path.exists(self.filenameInput):
-            f = open(filename, 'r')
+            f = open(self.filenameInput, 'r')
             command = f.readline()
             f.close()
-            os.remove(filename)
+            os.remove(self.filenameInput)
             return command
         else:
             return 'none'
@@ -235,11 +231,21 @@ class RobotClient:
     ##############################################################################
     def processCommand(self, command):
 
+        self.printLog('The following command will be sent to the robot')
+        self.printCom(command)
         n = len(command)
         #I make sure that the command ends with a 0x0d, otherwise I add it
         if command[n-1] != 0x0d:
             command = command + '\n'
-
+        
+        if command[0] == '@':
+            if command.find('quit') != -1:
+                self.printLog('Closing the session')
+                self.exit()
+        elif command[0] == '.':
+            return
+        else:
+            return 
     ##############################################################################
 
 
