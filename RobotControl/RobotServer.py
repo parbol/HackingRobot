@@ -14,8 +14,8 @@ import time
 
 class RobotServer:
 
- ##############################################################################
-    def __init__(self, robot_IP, robot_PORT, robot_BUFFER):
+    ##############################################################################
+    def __init__(self, robot_IP, robot_PORT):
 
         #Technical stuff
         self.HEADER = '\033[95m'
@@ -27,10 +27,10 @@ class RobotServer:
         #Information for the client
         self.robot_IP = robot_IP
         self.robot_PORT = robot_PORT
-        self.robot_BUFFER = robot_BUFFER
 
         #Messages from the server
-        self.serverHi = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0a, 0x00, 0xa4, 0x02, 0x8c, 0x02, 0xa5, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]
+        #self.serverHi = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0a, 0x00, 0xa4, 0x02, 0x8c, 0x02, 0xa5, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]
+        self.serverHi = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0a, 0x00, 0xa4]
         self.serverMessage = [0x02, 0x00, 0xff, 0x44, 0x00, 0x14]
         self.countingAnswer = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0f, 0x00, 0x02]
 
@@ -67,7 +67,7 @@ class RobotServer:
                     self.printError("Unexpected message from the client: exiting")
                     self.exit()     
         finally:
-            self.printError('An exception was caught')
+            self.printError('Connection with client closed')
             self.exit()
     ##############################################################################
 

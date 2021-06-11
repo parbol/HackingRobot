@@ -14,7 +14,7 @@ import os
 class RobotClient:
 
     ##############################################################################
-    def __init__(self, robot_IP, robot_PORT, robot_BUFFER, filenameInput, filenameOutput):
+    def __init__(self, robot_IP, robot_PORT, filenameInput, filenameOutput):
 
         #Technical stuff
         self.HEADER = '\033[95m'
@@ -26,12 +26,12 @@ class RobotClient:
         #Information for the client
         self.robot_IP = robot_IP
         self.robot_PORT = robot_PORT
-        self.robot_BUFFER = robot_BUFFER
         self.filenameInput = filenameInput
         self.filenameOutput = filenameOutput
 
         #Messages from the server
-        self.serverHi = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0a, 0x00, 0xa4, 0x02, 0x8c, 0x02, 0xa5, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]
+        #self.serverHi = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0a, 0x00, 0xa4, 0x02, 0x8c, 0x02, 0xa5, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]
+        self.serverHi = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0a, 0x00, 0xa4]
         self.serverMessage = [0x02, 0x00, 0xff, 0x44, 0x00, 0x14]
         self.countingAnswer = [0x00, 0x00, 0x00, 0x04, 0x00, 0x0f, 0x00, 0x02]
 
@@ -84,43 +84,43 @@ class RobotClient:
     ##############################################################################
     
     ##############################################################################
+    def getFullPackage(self):
+        
+        header = self.s.recv(8)
+        thesize = ord(header[6]) * 16 + ord(header[7])
+        data = self.s.recv(thesize)
+        return header, data
+    ##############################################################################
+
+    ##############################################################################
     def handshake(self):
     
         self.s.sendall(bytearray(self.clientHi))
-        data = self.s.recv(self.robot_BUFFER)
-        if not self.isEqual(data, self.serverHi):
+        header, data = self.getFullPackage()
+        if not self.isEqual(header, self.serverHi):
             self.printError('Server Handshake response is not valid')
             self.exit()
         self.sendConfirmation()
-
-        data = self.s.recv(self.robot_BUFFER)
-        if not self.isEqual(data, self.serverMessage):
+        
+        header, data = self.getFullPackage()
+        if not self.isEqual(header, self.serverMessage):
             self.printError('The server sent an invalid message')
             self.exit()
-        block = self.unpackMessage(data)
         self.printLog('Message received from server:')
-        self.printCom(block)
+        self.printCom(data)
         self.sendConfirmation()
     
-        data = self.s.recv(self.robot_BUFFER)
-        if not self.isEqual(data, self.serverMessage):
+        header, data = self.getFullPackage()
+        if not self.isEqual(header, self.serverMessage):
             self.printError('The server sent an invalid message')
             self.exit()
-        block = self.unpackMessage(data)
         self.printLog('Message received from server:')
-        self.printCom(block)
+        self.printCom(data)
         self.sendConfirmation()
         self.printLog('Successful handshake performed')
 
     ##############################################################################
 
-    ##############################################################################
-    def unpackMessage(self, data):
-        size = ord(data[7])
-        block = data[8:8+size]
-        return block
-    ##############################################################################
-    
     ##############################################################################
     def isEqual(self, data1, data2):
 
@@ -220,13 +220,12 @@ class RobotClient:
         order[3] = 0x77 - character
         order[7] = character
         self.s.sendall(bytearray(order))
-        data = self.s.recv(self.robot_BUFFER)
-        if data[9] == self.counter[8]:
+        data = self.s.recv(9)
+        if data[8] == order[7]:
             self.sendConfirmation()
             return True
         return False
     ##############################################################################
-
     
     ##############################################################################
     def processCommand(self, command):
